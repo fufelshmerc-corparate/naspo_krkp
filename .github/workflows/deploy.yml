@@ -1,0 +1,47 @@
+name: Deploy Jitsi
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Decode .env
+      run: |
+        echo "${{ secrets.ENV_FILE_BASE64 }}" | base64 --decode > .env
+
+    - name: Add SSH key
+      uses: webfactory/ssh-agent@v0.5.3
+      with:
+        ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+    - name: Add VPS to known_hosts
+      run: |
+        mkdir -p ~/.ssh
+        ssh-keyscan -H ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts
+        chmod 644 ~/.ssh/known_hosts
+
+    - name: Prepare folders on VPS
+      run: |
+        ssh -o StrictHostKeyChecking=yes ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} "
+          mkdir -p /app
+          mkdir -p ~/.jitsi-meet-cfg/{web,transcripts,prosody/config,prosody/prosody-plugins-custom,jicofo,jvb,jigasi,jibri}
+        "
+
+    - name: Copy files to VPS
+      run: |
+        scp .env ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:/app/.env
+        scp stack.yml ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:/app/stack.yml
+
+    - name: Deploy on VPS
+      run: |
+        ssh ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} "
+          cd /app
+          docker stack deploy -c stack.yml jitsi
+        "
+
