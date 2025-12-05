@@ -27,7 +27,7 @@ jobs:
         chmod 644 ~/.ssh/known_hosts
     - name: Prepare folders on VPS
       run: |
-        ssh -o StrictHostKeyChecking=yes ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} "
+        ssh -p 6767 -o StrictHostKeyChecking=yes ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} "
           mkdir -p /app
           mkdir -p ~/.jitsi-meet-cfg/{web,transcripts,prosody/config,prosody/prosody-plugins-custom,jicofo,jvb,jigasi,jibri}
         "
