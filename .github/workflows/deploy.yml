@@ -1,12 +1,47 @@
-name: Deploy Jitsi
+name: CI & Deploy Jitsi
 
 on:
   push:
     branches: [ main ]
+  pull_request:
 
 jobs:
-  deploy:
+  ci:
+    name: Simple CI
     runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Decode .env
+      run: |
+        echo "${{ secrets.ENV_FILE_BASE64 }}" | base64 --decode > .env
+
+    - name: Check .env file exists
+      run: |
+        if [ -f .env ]; then
+          echo ".env file exists ✅"
+        else
+          echo ".env file is missing ❌"
+          exit 1
+        fi
+
+    - name: Check stack.yml exists
+      run: |
+        if [ -f stack.yml ]; then
+          echo "stack.yml exists ✅"
+        else
+          echo "stack.yml is missing ❌"
+          exit 1
+        fi
+
+  deploy:
+    name: Deploy to VPS
+    needs: ci
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'  # Деплой только из main
+
     steps:
     - name: Checkout repository
       uses: actions/checkout@v3
@@ -25,6 +60,7 @@ jobs:
         mkdir -p ~/.ssh
         ssh-keyscan -H -p 6767 ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts
         chmod 644 ~/.ssh/known_hosts
+
     - name: Prepare folders on VPS
       run: |
         ssh -p 6767 -o StrictHostKeyChecking=yes ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} "
