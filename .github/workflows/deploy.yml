@@ -41,6 +41,9 @@ jobs:
       run: |
         ssh -p 6767 ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} "
           cd /app
+          set -a
+          source .env
+          set +a
           docker stack deploy -c stack.yml jitsi
         "
 
